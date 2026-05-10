@@ -1,0 +1,35 @@
+import random
+#lottery simulator
+lottery_numbers = random.sample(range(1, 51), 6)
+print("Lottery numbers:", lottery_numbers)
+
+#password system
+l = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+password = ""
+
+for i in range(12):
+    password += random.choice(l)
+
+print("Random password:", password)
+
+#quiz system
+questions = [
+    "What is Python?",
+    "what is AI?",
+    "What is a computer?",
+    "What is coding?"
+]
+
+question = random.choice(questions)
+print("Practice question:", question)
+#recipe
+
+recipes = [
+    "Pizza",
+    "Pasta",
+    "Burger",
+    "Fried Rice"
+]
+recipe = random.choice(recipes)
+print("Today's recipe:", recipe)
