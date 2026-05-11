@@ -1,0 +1,130 @@
+import random 
+import time
+print("====  BE A MILLIONER  ====\n")
+cash = 0
+level = 1
+while cash < 50:
+    time.sleep(1)
+    cash += 1
+    print(f"CASH = {cash}$")
+if cash >= 50:
+    print("you can now upgrade to next level for 50$")
+    lvup2 = input("Do you want to upgrade to next level ? [yes/no]")
+    if lvup2 == "yes":
+        print("You have reached level 2")
+        cash -= 50
+        level += 1
+        sp1=input("Do you want to spin[yes/no]")
+        if sp1=="yes":
+            spinlist=random.sample(range(100,200))
+        cash = spinlist
+        while cash < 300:
+            time.sleep(1)
+            cash += 3
+            print(f"CASH = {cash}$")
+if cash >= 300:
+    print("you can now upgrade to next level for 300$")
+    lvup3 = input("Do you want to upgrade to next level ? [yes/no]")
+    if lvup3 == "yes":
+        print("You have reached level 3")
+        cash -= 300
+        level += 1
+        sp1=input("Do you want to spin[yes/no]")
+        if sp1=="yes":
+            spinlist=random.sample(range(200,300))
+        cash = spinlist
+        while cash < 1000:
+            time.sleep(1)
+            cash += 6
+            print(f"CASH = {cash}$")
+if cash >= 1000:
+    print("you can now upgrade to next level for 1000$")
+    lvup3 = input("Do you want to upgrade to next level ? [yes/no]")
+    if lvup3 == "yes":
+        print("You have reached level 4")
+        cash -= 1000
+        level += 1
+        sp1=input("Do you want to spin[yes/no]")
+        if sp1=="yes":
+            spinlist=random.sample(range(500,1000))
+        cash = spinlist
+        while cash < 5000:
+            time.sleep(1)
+            cash += 10
+            print(f"CASH = {cash}$")
+if cash >= 5000:
+    print("You can now rebirth for 2x multiplier for cash income")
+    rb1=input("Rebirth costs 5000$. Do you want to continue?[yes/no]")
+    if rb1 == "yes":
+        print("Rebirth successfull \n you got free spin for money")
+        cash = 0
+        print(f"CASH = {cash}$")
+        sp1=input("Do you want to spin[yes/no]")
+        if sp1=="yes":
+            spinlist=random.sample(range(500,1000))
+        cash = spinlist
+        print(f"CASH = {cash}$")
+        while cash < 50:
+            time.sleep(1)
+            cash += 1*2
+            print(f"CASH = {cash}$")
+        if cash >= 50:
+            print("you can now upgrade to next level for 50$")
+            lvup2 = input("Do you want to upgrade to next level ? [yes/no]")
+            if lvup2 == "yes":
+                print("You have reached level 2")
+                cash -= 50
+                level += 1
+                sp1=input("Do you want to spin[yes/no]")
+                if sp1=="yes":
+                    spinlist=random.sample(range(500,1000))
+                cash = spinlist
+                while cash < 300:
+                    time.sleep(1)
+                    cash += 3*2
+                    print(f"CASH = {cash}$")
+        if cash >= 300:
+            print("you can now upgrade to next level for 300$")
+            lvup3 = input("Do you want to upgrade to next level ? [yes/no]")
+            if lvup3 == "yes":
+                print("You have reached level 3")
+                cash -= 300
+                level += 1
+                sp1=input("Do you want to spin[yes/no]")
+                if sp1=="yes":
+                    spinlist=random.sample(range(500,1000))
+                cash = spinlist
+                while cash < 1000:
+                    time.sleep(1)
+                    cash += 6*2
+                    print(f"CASH = {cash}$")
+        if cash >= 1000:
+            print("you can now upgrade to next level for 1000$")
+            lvup3 = input("Do you want to upgrade to next level ? [yes/no]")
+            if lvup3 == "yes":
+                print("You have reached level 4")
+                cash -= 1000
+                level += 1
+                sp1=input("Do you want to spin[yes/no]")
+                if sp1=="yes":
+                    spinlist=random.sample(range(500,1000))
+                cash = spinlist
+                while cash < 5000:
+                    time.sleep(1)
+                    cash += 10*2
+                    print(f"CASH = {cash}$")
+        if cash >= 5000:
+            print("you can now upgrade to next level for 5000$")
+            lvup4 = input("Do you want to upgrade to next level ? [yes/no]")
+            if lvup4 == "yes":
+                print("You have reached level 5")
+                cash -= 1000
+                level += 1
+                sp1=input("Do you want to spin[yes/no]")
+                if sp1=="yes":
+                    spinlist=random.sample(range(500,1000))
+                cash = spinlist
+                while cash < 15000:
+                    time.sleep(1)
+                    cash += 15*2
+                    print(f"CASH = {cash}$")
