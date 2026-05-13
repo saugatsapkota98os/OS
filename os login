@@ -1,0 +1,47 @@
+import tkinter as tk
+root=tk.Tk()
+root.attributes("-fullscreen",True)
+root.configure(bg="#4D4D4D")
+root.title("login screen")
+
+canvas=tk.Canvas(
+    root,
+    width=195,
+    height=195,
+    bg="#707070",
+    highlightthickness=0,
+    bd=0
+)
+canvas.pack(pady=250)
+
+canvas.create_oval(
+    67,20,
+    127,80,
+    fill="#3F3F3F",
+    outlines="",
+    width=0
+)
+canvas.create_oval(
+    47,90,
+    147,190,
+    fill="#3F3F3F",
+    outlines="",
+    width=0
+)
+password_entry=tk.Entry(
+    root,
+    font=("Arial",16),
+    show="8"
+)
+login_btn = tk.Button(
+    root,
+    text="Login"
+)
+def show_password(event):
+    password_entry.pack(pady=10)
+    login_btn.pack(pady=10)
+canvas.bind(
+    "<Button-1>",
+    show_password
+)
+root.mainloop()
