@@ -18,20 +18,21 @@ canvas.create_oval(
     67,20,
     127,80,
     fill="#3F3F3F",
-    outlines="",
+    outline="",
     width=0
 )
 canvas.create_oval(
     47,90,
     147,190,
     fill="#3F3F3F",
-    outlines="",
+    outline="",
     width=0
 )
 password_entry=tk.Entry(
     root,
     font=("Arial",16),
-    show="8"
+    show="*",
+    width=10
 )
 login_btn = tk.Button(
     root,
