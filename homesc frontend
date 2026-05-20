@@ -1,0 +1,25 @@
+import tkinter as tk
+root=tk.Tk()
+root.attributes("-fullscreen",True)
+root.configure(bg="#333333")
+root.title("Home Screeen")
+
+#menu
+menu_btn = tk.Button(
+    root,
+    text="Menu",
+    bg= "#2E2E2E",
+    fg="white",
+    font=("Arial",12),
+    relief="flat",
+    padx=20,
+    pady=10
+)
+menu_btn.place(
+    x=0,
+    rely=1.0,
+    anchor="sw"
+)
+#animation for menu
+
+root.mainloop()
