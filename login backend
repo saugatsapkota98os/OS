@@ -1,0 +1,21 @@
+data = {"user1":"password123"}
+u_user = input("Enter your username : ")
+
+if u_user in data:
+    attempt = 5
+    password = data[u_user]
+    u_passw = None
+    while password != u_passw and attempt > 0:
+        u_passw = input("enter the password : ")
+        if u_passw != password:
+            print("wrong password ! try again")
+            attempt -= 1
+            print(f"you have {attempt} attempts left")
+        if u_passw == password:
+            print("correct password !")
+            print("you have logged in successfully")
+            break
+        
+
+else:
+        print("Sorry, user does not exist.")    
