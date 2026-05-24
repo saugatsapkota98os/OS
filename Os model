@@ -1,0 +1,1021 @@
+import tkinter as tk
+from tkinter import ttk
+import sqlite3
+import hashlib
+import os
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+conn = sqlite3.connect("database.db")
+cursor = conn.cursor()
+
+# =========================================================
+# SECURITY
+# =========================================================
+
+def generate_salt():
+
+    return os.urandom(16).hex()
+
+
+def hash_password(password, salt):
+
+    return hashlib.sha256(
+        (password + salt).encode()
+    ).hexdigest()
+
+
+def verify_password(password, salt, hashed):
+
+    return hash_password(
+        password,
+        salt
+    ) == hashed
+
+
+# =========================================================
+# DATABASE FIX + AUTO MIGRATION
+# =========================================================
+
+cursor.execute("""
+SELECT name
+FROM sqlite_master
+WHERE type='table'
+AND name='users'
+""")
+
+table_exists = cursor.fetchone()
+
+# CREATE TABLE
+
+if not table_exists:
+
+    cursor.execute("""
+    CREATE TABLE users (
+        username TEXT PRIMARY KEY,
+        password TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+else:
+
+    # CHECK OLD STRUCTURE
+
+    cursor.execute("""
+    PRAGMA table_info(users)
+    """)
+
+    columns = [column[1] for column in cursor.fetchall()]
+
+    # OLD DATABASE DETECTED
+
+    if "salt" not in columns:
+
+        cursor.execute("""
+        SELECT username
+        FROM users
+        """)
+
+        old_users = cursor.fetchall()
+
+        # REMOVE OLD TABLE
+
+        cursor.execute("""
+        DROP TABLE users
+        """)
+
+        # CREATE NEW TABLE
+
+        cursor.execute("""
+        CREATE TABLE users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # RECREATE USERS
+
+        for user in old_users:
+
+            username = user[0]
+
+            salt = generate_salt()
+
+            hashed = hash_password(
+                "1234",
+                salt
+            )
+
+            cursor.execute("""
+            INSERT INTO users (
+                username,
+                password,
+                salt
+            )
+            VALUES (?, ?, ?)
+            """, (
+                username,
+                hashed,
+                salt
+            ))
+
+# =========================================================
+# DEFAULT ADMIN
+# =========================================================
+
+cursor.execute("""
+SELECT username
+FROM users
+WHERE username=?
+""", ("admin",))
+
+if not cursor.fetchone():
+
+    salt = generate_salt()
+
+    hashed = hash_password(
+        "1234",
+        salt
+    )
+
+    cursor.execute("""
+    INSERT INTO users (
+        username,
+        password,
+        salt
+    )
+    VALUES (?, ?, ?)
+    """, (
+        "admin",
+        hashed,
+        salt
+    ))
+
+conn.commit()
+
+# =========================================================
+# APP
+# =========================================================
+
+class ModernApp(tk.Tk):
+
+    def __init__(self):
+
+        super().__init__()
+
+        # WINDOW
+
+        self.title("OS MODEL")
+
+        self.geometry("1200x700")
+        self.minsize(900, 500)
+
+        # STATES
+
+        self.dark_mode = True
+        self.is_fullscreen = False
+
+        self.logged_in = False
+        self.current_user = None
+        self.current_page = "login"
+
+        # MENU
+
+        self.menu_open = False
+        self.menu_frame = None
+        self.animating = False
+
+        # FRAME CACHE
+
+        self.frames = {}
+
+        # STYLE
+
+        self.style = ttk.Style()
+
+        self.setup_theme()
+
+        # CONTAINER
+
+        self.container = tk.Frame(
+            self,
+            bg=self.bg
+        )
+
+        self.container.pack(
+            fill="both",
+            expand=True
+        )
+
+        # TASKBAR
+
+        self.create_taskbar()
+
+        # START PAGE
+
+        self.navigate("login")
+
+        # BINDS
+
+        self.bind(
+            "<F11>",
+            self.toggle_fullscreen
+        )
+
+        self.bind(
+            "<Escape>",
+            self.exit_fullscreen
+        )
+
+        self.bind_all(
+            "<Button-1>",
+            self.global_click,
+            add="+"
+        )
+
+        # WINDOW CLOSE
+
+        self.protocol(
+            "WM_DELETE_WINDOW",
+            self.on_close
+        )
+
+    # =====================================================
+    # THEME
+    # =====================================================
+
+    def setup_theme(self):
+
+        if self.dark_mode:
+
+            self.bg = "#1e1e1e"
+            self.card = "#2b2b2b"
+            self.fg = "white"
+
+            self.taskbar_bg = "#111111"
+
+            self.accent = "#6c5ce7"
+            self.hover = "#574bdb"
+
+            self.entry_bg = "#3a3a3a"
+
+        else:
+
+            self.bg = "#f5f6fa"
+            self.card = "#ffffff"
+            self.fg = "#111111"
+
+            self.taskbar_bg = "#dddddd"
+
+            self.accent = "#4834d4"
+            self.hover = "#3726b6"
+
+            self.entry_bg = "#ffffff"
+
+        self.configure(
+            bg=self.bg
+        )
+
+        self.style.theme_use("clam")
+
+        self.style.configure(
+            "Accent.TButton",
+            font=("Segoe UI", 10, "bold"),
+            padding=10,
+            background=self.accent,
+            foreground="white",
+            borderwidth=0
+        )
+
+        self.style.map(
+            "Accent.TButton",
+            background=[("active", self.hover)]
+        )
+
+        self.style.configure(
+            "TEntry",
+            fieldbackground=self.entry_bg,
+            foreground=self.fg,
+            padding=8
+        )
+
+        self.style.configure(
+            "Error.TEntry",
+            fieldbackground="#ffdddd"
+        )
+
+    # =====================================================
+    # NAVIGATION
+    # =====================================================
+
+    def navigate(self, page):
+
+        self.current_page = page
+
+        if page == "login":
+            self.show_login()
+
+        elif page == "main":
+            self.show_main()
+
+        elif page == "settings":
+            self.show_settings()
+
+    # =====================================================
+    # TASKBAR
+    # =====================================================
+
+    def create_taskbar(self):
+
+        self.taskbar = tk.Frame(
+            self,
+            bg=self.taskbar_bg,
+            height=48
+        )
+
+        self.taskbar.pack(
+            side="bottom",
+            fill="x"
+        )
+
+        # MENU BUTTON
+
+        self.menu_btn = tk.Button(
+            self.taskbar,
+            text="⋮",
+            font=("Segoe UI", 16, "bold"),
+            bg=self.taskbar_bg,
+            fg="white" if self.dark_mode else "black",
+            bd=0,
+            padx=15,
+            activebackground=self.hover,
+            activeforeground="white",
+            cursor="hand2",
+            command=self.toggle_menu
+        )
+
+        self.menu_btn.pack(
+            side="left",
+            padx=10
+        )
+
+        # APP NAME
+
+        app_name = tk.Label(
+            self.taskbar,
+            text="Modern App",
+            bg=self.taskbar_bg,
+            fg="white" if self.dark_mode else "black",
+            font=("Segoe UI", 9)
+        )
+
+        app_name.pack(
+            side="left"
+        )
+
+        # FULLSCREEN BUTTON
+
+        fullscreen_btn = tk.Button(
+            self.taskbar,
+            text="⬜",
+            bg=self.taskbar_bg,
+            fg="white" if self.dark_mode else "black",
+            bd=0,
+            padx=10,
+            activebackground=self.hover,
+            activeforeground="white",
+            cursor="hand2",
+            command=self.toggle_fullscreen
+        )
+
+        fullscreen_btn.pack(
+            side="right",
+            padx=10
+        )
+
+    # =====================================================
+    # FULLSCREEN
+    # =====================================================
+
+    def toggle_fullscreen(self, event=None):
+
+        self.is_fullscreen = not bool(
+            self.attributes("-fullscreen")
+        )
+
+        self.attributes(
+            "-fullscreen",
+            self.is_fullscreen
+        )
+
+    def exit_fullscreen(self, event=None):
+
+        self.is_fullscreen = False
+
+        self.attributes(
+            "-fullscreen",
+            False
+        )
+
+    # =====================================================
+    # MENU
+    # =====================================================
+
+    def toggle_menu(self):
+
+        if not self.logged_in:
+            return
+
+        if self.animating:
+            return
+
+        if self.menu_open:
+
+            self.close_menu()
+            return
+
+        self.menu_open = True
+        self.animating = True
+
+        self.menu_frame = tk.Frame(
+            self,
+            bg=self.card,
+            height=75
+        )
+
+        self.menu_frame.place(
+            x=0,
+            rely=1.0,
+            anchor="sw",
+            width=0
+        )
+
+        button_container = tk.Frame(
+            self.menu_frame,
+            bg=self.card
+        )
+
+        button_container.pack(
+            fill="both",
+            expand=True,
+            padx=8,
+            pady=5
+        )
+
+        items = [
+
+            ("🏠", "Home",
+             lambda: self.navigate("main")),
+
+            ("⚙", "Settings",
+             lambda: self.navigate("settings")),
+
+            ("☀", "Theme",
+             self.toggle_theme),
+
+            ("🖵", "Fullscreen",
+             self.toggle_fullscreen),
+
+            ("⇦", "Logout",
+             self.logout)
+
+        ]
+
+        for icon, text, command in items:
+
+            btn = tk.Button(
+                button_container,
+                text=f"{icon}\n{text}",
+                bg=self.card,
+                fg=self.fg,
+                bd=0,
+                width=10,
+                height=3,
+                font=("Segoe UI", 8),
+                activebackground=self.accent,
+                activeforeground="white",
+                cursor="hand2",
+                command=lambda c=command:
+                self.menu_action(c)
+            )
+
+            btn.pack(
+                side="left",
+                padx=5
+            )
+
+            # HOVER
+
+            btn.bind(
+                "<Enter>",
+                lambda e, b=btn:
+                b.config(bg=self.hover)
+            )
+
+            btn.bind(
+                "<Leave>",
+                lambda e, b=btn:
+                b.config(bg=self.card)
+            )
+
+        self.animate_menu_open(0)
+
+    # =====================================================
+    # MENU ACTION
+    # =====================================================
+
+    def menu_action(self, callback):
+
+        self.close_menu()
+
+        self.after(
+            120,
+            callback
+        )
+
+    # =====================================================
+    # OPEN MENU
+    # =====================================================
+
+    def animate_menu_open(self, width):
+
+        target = self.winfo_width()
+
+        if width >= target:
+
+            self.menu_frame.place(
+                width=target
+            )
+
+            self.animating = False
+
+            return
+
+        width += 50
+
+        self.menu_frame.place(
+            width=width
+        )
+
+        self.after(
+            5,
+            lambda:
+            self.animate_menu_open(width)
+        )
+
+    # =====================================================
+    # CLOSE MENU
+    # =====================================================
+
+    def close_menu(self):
+
+        if self.animating:
+            return
+
+        if self.menu_frame:
+
+            self.animating = True
+
+            self.animate_menu_close(
+                self.winfo_width()
+            )
+
+    # =====================================================
+    # CLOSE ANIMATION
+    # =====================================================
+
+    def animate_menu_close(self, width):
+
+        if width <= 0:
+
+            if self.menu_frame:
+                self.menu_frame.destroy()
+
+            self.menu_frame = None
+
+            self.menu_open = False
+            self.animating = False
+
+            return
+
+        width -= 50
+
+        self.menu_frame.place(
+            width=width
+        )
+
+        self.after(
+            5,
+            lambda:
+            self.animate_menu_close(width)
+        )
+
+    # =====================================================
+    # GLOBAL CLICK
+    # =====================================================
+
+    def global_click(self, event):
+
+        if not self.menu_open:
+            return
+
+        widget = event.widget
+
+        if widget == self.menu_btn:
+            return
+
+        parent = widget
+
+        while parent:
+
+            if parent == self.menu_frame:
+                return
+
+            parent = parent.master
+
+        self.close_menu()
+
+    # =====================================================
+    # FRAME MANAGEMENT
+    # =====================================================
+
+    def hide_frames(self):
+
+        for frame in self.frames.values():
+
+            frame.pack_forget()
+
+    # =====================================================
+    # LOGIN PAGE
+    # =====================================================
+
+    def show_login(self):
+
+        self.hide_frames()
+
+        if "login" not in self.frames:
+
+            frame = tk.Frame(
+                self.container,
+                bg=self.bg
+            )
+
+            self.frames["login"] = frame
+
+            wrapper = tk.Frame(
+                frame,
+                bg=self.bg
+            )
+
+            wrapper.place(
+                relx=0.5,
+                rely=0.5,
+                anchor="center"
+            )
+
+            card = tk.Frame(
+                wrapper,
+                bg=self.card,
+                padx=50,
+                pady=40
+            )
+
+            card.pack()
+
+            title = tk.Label(
+                card,
+                text="LOGIN",
+                bg=self.card,
+                fg=self.fg,
+                font=("Segoe UI", 24, "bold")
+            )
+
+            title.pack(
+                pady=(0, 25)
+            )
+
+            # USERNAME
+
+            tk.Label(
+                card,
+                text="Username",
+                bg=self.card,
+                fg=self.fg
+            ).pack(anchor="w")
+
+            self.username_entry = ttk.Entry(
+                card,
+                width=35
+            )
+
+            self.username_entry.pack(
+                pady=(5, 15),
+                ipady=3
+            )
+
+            # PASSWORD
+
+            tk.Label(
+                card,
+                text="Password",
+                bg=self.card,
+                fg=self.fg
+            ).pack(anchor="w")
+
+            self.password_entry = ttk.Entry(
+                card,
+                width=35,
+                show="•"
+            )
+
+            self.password_entry.pack(
+                pady=(5, 15),
+                ipady=3
+            )
+
+            # RESULT LABEL
+
+            self.result_label = tk.Label(
+                card,
+                text="",
+                bg=self.card,
+                fg="#ff6b6b"
+            )
+
+            self.result_label.pack()
+
+            # LOGIN BUTTON
+
+            login_btn = ttk.Button(
+                card,
+                text="Login",
+                style="Accent.TButton",
+                command=self.login
+            )
+
+            login_btn.pack(
+                fill="x",
+                pady=(20, 0)
+            )
+
+        self.frames["login"].pack(
+            fill="both",
+            expand=True
+        )
+
+        self.unbind("<Return>")
+
+        self.bind(
+            "<Return>",
+            lambda e:
+            self.login()
+        )
+
+        self.username_entry.focus()
+
+    # =====================================================
+    # LOGIN
+    # =====================================================
+
+    def login(self):
+
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+
+        self.username_entry.configure(
+            style="TEntry"
+        )
+
+        self.password_entry.configure(
+            style="TEntry"
+        )
+
+        cursor.execute("""
+        SELECT password, salt
+        FROM users
+        WHERE username=?
+        """, (username,))
+
+        result = cursor.fetchone()
+
+        if result:
+
+            stored_password = result[0]
+            salt = result[1]
+
+            if verify_password(
+                password,
+                salt,
+                stored_password
+            ):
+
+                self.logged_in = True
+                self.current_user = username
+
+                self.result_label.config(
+                    text=""
+                )
+
+                self.username_entry.delete(
+                    0,
+                    tk.END
+                )
+
+                self.password_entry.delete(
+                    0,
+                    tk.END
+                )
+
+                self.navigate("main")
+
+                return
+
+        # LOGIN FAILED
+
+        self.result_label.config(
+            text="Invalid username or password"
+        )
+
+        self.username_entry.configure(
+            style="Error.TEntry"
+        )
+
+        self.password_entry.configure(
+            style="Error.TEntry"
+        )
+
+        self.password_entry.delete(
+            0,
+            tk.END
+        )
+
+    # =====================================================
+    # MAIN PAGE
+    # =====================================================
+
+    def show_main(self):
+
+        self.hide_frames()
+
+        if "main" not in self.frames:
+
+            frame = tk.Frame(
+                self.container,
+                bg=self.bg
+            )
+
+            self.frames["main"] = frame
+
+            title = tk.Label(
+                frame,
+                text="Welcome Back",
+                bg=self.bg,
+                fg=self.fg,
+                font=("Segoe UI", 34, "bold")
+            )
+
+            title.pack(
+                anchor="w",
+                pady=(40, 5),
+                padx=40
+            )
+
+            subtitle = tk.Label(
+                frame,
+                text="Animated Bottom Popup Menu",
+                bg=self.bg,
+                fg="#aaaaaa",
+                font=("Segoe UI", 13)
+            )
+
+            subtitle.pack(
+                anchor="w",
+                padx=40
+            )
+
+        self.frames["main"].pack(
+            fill="both",
+            expand=True
+        )
+
+    # =====================================================
+    # SETTINGS
+    # =====================================================
+
+    def show_settings(self):
+
+        self.hide_frames()
+
+        if "settings" not in self.frames:
+
+            frame = tk.Frame(
+                self.container,
+                bg=self.bg
+            )
+
+            self.frames["settings"] = frame
+
+            title = tk.Label(
+                frame,
+                text="Settings",
+                bg=self.bg,
+                fg=self.fg,
+                font=("Segoe UI", 28, "bold")
+            )
+
+            title.pack(
+                anchor="w",
+                pady=(40, 30),
+                padx=40
+            )
+
+            ttk.Button(
+                frame,
+                text="Toggle Theme",
+                style="Accent.TButton",
+                command=self.toggle_theme
+            ).pack(
+                anchor="w",
+                padx=40,
+                pady=10
+            )
+
+            ttk.Button(
+                frame,
+                text="Back",
+                style="Accent.TButton",
+                command=lambda:
+                self.navigate("main")
+            ).pack(
+                anchor="w",
+                padx=40,
+                pady=10
+            )
+
+        self.frames["settings"].pack(
+            fill="both",
+            expand=True
+        )
+
+    # =====================================================
+    # LOGOUT
+    # =====================================================
+
+    def logout(self):
+
+        self.logged_in = False
+        self.current_user = None
+
+        self.navigate("login")
+
+    # =====================================================
+    # TOGGLE THEME
+    # =====================================================
+
+    def toggle_theme(self):
+
+        self.dark_mode = not self.dark_mode
+
+        self.setup_theme()
+
+        self.taskbar.destroy()
+
+        self.create_taskbar()
+
+        # CLEAR OLD FRAMES
+
+        for frame in self.frames.values():
+
+            frame.destroy()
+
+        self.frames.clear()
+
+        # RELOAD PAGE
+
+        self.navigate(
+            self.current_page
+        )
+
+    # =====================================================
+    # CLOSE WINDOW
+    # =====================================================
+
+    def on_close(self):
+
+        conn.close()
+
+        self.destroy()
+
+
+# =========================================================
+# RUN
+# =========================================================
+
+app = ModernApp()
+app.mainloop()
